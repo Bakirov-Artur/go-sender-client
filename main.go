@@ -8,6 +8,7 @@ import (
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
 	"bufio"
 	"strings"
+	"time"
 )
 
 type Message struct {
@@ -19,6 +20,7 @@ type Message struct {
 func main() {
 	//Create connect to data server
     conn, err := net.Dial("tcp", "127.0.0.1:9876")
+	//Set deadline connect
     if err != nil {
         fmt.Println(err)
         return
@@ -44,6 +46,7 @@ func main() {
 		db.Create(&Message{Content: text, Status: 0})
 		fmt.Println("Cообщение сохранен\n")
 		//Send maessage to data server
+		conn.SetDeadline(time.Now().Add(time.Second*5))
 		resp, werr := io.CopyBuffer(conn, strings.NewReader(text), buf)
 		if resp == 0 || werr != nil {
 			fmt.Println("Не удалось отправить сообщение серверу...")
@@ -53,10 +56,11 @@ func main() {
 		}
 
 		//Get response from server.
+		conn.SetDeadline(time.Now().Add(time.Second*5))
 		var respBuf strings.Builder
 		resp, werr = io.CopyBuffer(&respBuf, conn, buf)
 		if resp <= 0 || werr != nil {
-			fmt.Print("Не удалось получить ответ от сервера")
+			fmt.Println("Не удалось получить ответ от сервера")
 			continue
 		} else {
 			fmt.Printf("Ответ от сервера: %s", respBuf.String())
